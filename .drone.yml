@@ -61,7 +61,7 @@ steps:
       - (cd $${brotli_git_clone_path} && git submodule update)
       - (cd /opt && wget https://nginx.org/download/nginx-$nginx_release_version.tar.gz)
       - (cd /opt && tar xzvf nginx-$nginx_release_version.tar.gz)
-      - (cd /opt/nginx-$nginx_release_version && ./configure --with-compat --add-dynamic-module=$${brotli_git_nginx_clone_path})
+      - (cd /opt/nginx-$nginx_release_version && ./configure --with-compat --add-dynamic-module=$${brotli_git_clone_path})
       - (cd /opt/nginx-$nginx_release_version && make modules) 
     
       # Create local git repo, tag the release and push it to the git
