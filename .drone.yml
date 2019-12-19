@@ -94,7 +94,6 @@ steps:
         from_secret: slack_webhook_url
       channel:
         from_secret: slack_channel
-      icon_url: https://synth.agency/wp-content/uploads/2016/11/Android-Studio.png
       username:
         from_secret: slack_username
       template: >
