@@ -1,0 +1,107 @@
+---
+kind: pipeline
+name: build-and-release
+
+platform:
+  os: linux
+  arch: amd64
+
+clone:
+  depth: 10
+
+steps:
+  - name: Check if pipeline should execute
+    image: alpine
+    pull: always
+    environment:
+      nginx_git_tags_uri: https://api.github.com/repos/nginx/nginx/tags
+      brotli_mint_git_tags_uri: https://api.github.com/repos/mint-hosting/nginx-module-brotli/tags
+    commands:
+      - apk update && apk add jq curl
+      - nginx_release_version=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].name' | cut -d"-" -f2)
+      - node=$(curl -s $${brotli_mint_git_tags_uri} | jq --arg NGINXVERSION "$nginx_release_version" '.[] | select(.name==$NGINXVERSION) | .node_id')
+      - if [[ "$node" != "" ]] ; then exit 1 ; fi
+
+  - name: Install dependencies and build the Brotli module
+    image: ubuntu:19.04
+    pull: always
+    environment:
+      GITHUB_SSH_KEY: 
+        from_secret: ssh_key
+      GITHUB_EMAIL:
+        from_secret: github_email
+      GITHUB_USERNAME:
+        from_secret: github_username
+      nginx_git_tags_uri: https://api.github.com/repos/nginx/nginx/tags
+      brotli_git_clone_path: /opt/brotli
+      brotli_git_nginx_clone_path: /opt/nginx
+      brotli_git_repo_uri: https://github.com/eustas/ngx_brotli.git
+      brotli_mint_git_tags_uri: https://api.github.com/repos/mint-hosting/nginx-module-brotli/tags
+      brotli_mint_module_git_repo_uri: git@github.com:mint-hosting/nginx-module-brotli.git
+      brotli_mint_module_git_repo_path: /opt/build
+    commands:
+      # Install dependencies
+      - apt update
+      - apt install -y jq git curl gnupg2 ca-certificates apt-utils autoconf automake build-essential git libcurl4-openssl-dev libgeoip-dev liblmdb-dev libpcre++-dev libtool libxml2-dev libyajl-dev pkgconf wget zlib1g-dev
+   
+      # Configure SSH and add deploy key
+      - mkdir -p /root/.ssh && chmod 666 /root/.ssh
+      - echo "    IdentityFile ~/.ssh/id_rsa" >> /etc/ssh/ssh_config
+      - eval "$(ssh-agent -s)"
+      - echo "Host github.com\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
+      - echo "$${GITHUB_SSH_KEY}" | tr -d '\r' | ssh-add - > /dev/null
+
+      # Set nginx variables - latest version and the source download url
+      - nginx_download_uri=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].tarball_url')
+      - nginx_release_version=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].name' | cut -d"-" -f2)
+
+      # Clone Brotli and build the module
+      - git clone --single-branch --branch v3/master $${brotli_git_repo_uri} $${brotli_git_clone_path}
+      - (cd $${brotli_git_clone_path} && git submodule init)
+      - (cd $${brotli_git_clone_path} && git submodule update)
+      - (cd /opt && wget https://nginx.org/download/nginx-$nginx_release_version.tar.gz)
+      - (cd /opt && tar xzvf nginx-$nginx_release_version.tar.gz)
+      - (cd /opt/nginx-$nginx_release_version && ./configure --with-compat --add-dynamic-module=$${brotli_git_nginx_clone_path})
+      - (cd /opt/nginx-$nginx_release_version && make modules) 
+    
+      # Create local git repo, tag the release and push it to the git
+      - mkdir -p $${brotli_mint_module_git_repo_path}
+      - (cd $${brotli_mint_module_git_repo_path} && git init)
+      - (cd $${brotli_mint_module_git_repo_path} && git config --global user.email "$${GITHUB_EMAIL}" && git config --global user.name "$${GITHUB_USERNAME}")
+      - (cd $${brotli_mint_module_git_repo_path} && git remote add origin $${brotli_mint_module_git_repo_uri})
+      - (cd $${brotli_mint_module_git_repo_path} && git pull origin master)
+   
+      # Copy the .so module file, creeate branch and push it to the git
+      - (cd $${brotli_mint_module_git_repo_path} && git checkout -b build-$nginx_release_version)
+      - cp /opt/nginx-$nginx_release_version/objs/ngx_http_brotli_filter_module.so $${brotli_mint_module_git_repo_path}
+      - cp /opt/nginx-$nginx_release_version/objs/ngx_http_brotli_static_module.so $${brotli_mint_module_git_repo_path}
+      - (cd $${brotli_mint_module_git_repo_path} && git add --all && git commit -m 'Brotli Module for nginx v$nginx_release_version')
+      - (cd $${brotli_mint_module_git_repo_path} && git push origin build-$nginx_release_version)
+  
+      # Tag the build and push it to git
+      - (cd $${brotli_mint_module_git_repo_path} && git tag -am "Brotli module built for nginx v$nginx_release_version" $nginx_release_version && git push origin $nginx_release_version)
+   
+      # Remove the remote branch
+      - (cd $${brotli_mint_module_git_repo_path} && git checkout master && git push origin --delete build-$nginx_release_version)  
+
+      # All done
+      - echo "Done! Module has been successfully compiled."
+
+  - name: Notifications
+    image: plugins/slack
+    settings:
+      webhook: 
+        from_secret: slack_webhook_url
+      channel:
+        from_secret: slack_channel
+      icon_url: https://synth.agency/wp-content/uploads/2016/11/Android-Studio.png
+      username:
+        from_secret: slack_username
+      template: >
+        {{#success build.status}}
+          {{ repo.name }} build {{ build.number }} (tagged as {{ build.tag }}) succeeded!
+        {{else}}
+          {{ repo.name }} build {{ build.number }} didn't run. Possible reasons: build failed or module is alrerady compiled for this version of Nginx. Last commit was {{ build.link }}
+        {{/success}}
+    when:
+      status: [ success, failure ]
