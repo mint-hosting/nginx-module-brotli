@@ -23,7 +23,7 @@ steps:
       #- if [[ "$node" != "" ]] ; then exit 1 ; fi
 
   - name: Install dependencies and build the Brotli module
-    image: ubuntu:19.04
+    image: ubuntu:18.04
     pull: always
     environment:
       GITHUB_SSH_KEY: 
