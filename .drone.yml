@@ -53,7 +53,8 @@ steps:
 
       # Set nginx variables - latest version and the source download url
       - nginx_download_uri=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].tarball_url')
-      - nginx_release_version=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].name' | cut -d"-" -f2)
+      #- nginx_release_version=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].name' | cut -d"-" -f2)
+      - nginx_release_version=1.16.0
 
       # Clone Brotli and build the module
       - git clone --single-branch --branch master $${brotli_git_repo_uri} $${brotli_git_clone_path}
