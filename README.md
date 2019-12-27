@@ -18,16 +18,16 @@ Installation
 load_module /usr/lib/nginx/modules/ngx_http_brotli_filter_module.so;
 load_module /usr/lib/nginx/modules/ngx_http_brotli_static_module.so;
 ```
-3. Perform additional configuration as required by the [https://github.com/google/ngx_brotli](module)
-4. Test new configuration and reload nginx server:
+1. Perform additional configuration as required by the [module](https://github.com/google/ngx_brotli)
+2. Test new configuration and reload nginx server:
 ```
 nginx -t && nginx -s reload
 ```
 
 More Information
 -----------------
-- [https://github.com/google/ngx_brotli](NGINX Module for Brotli Compression Reference)
-- [https://docs.nginx.com/nginx/admin-guide/dynamic-modules/dynamic-modules/] NGINX Dynamic Modules
+- [NGINX Module for Brotli Compression Reference](https://github.com/google/ngx_brotli)
+- [NGINX Dynamic Modules](https://docs.nginx.com/nginx/admin-guide/dynamic-modules/dynamic-modules/)
 
 License
 -----------------
