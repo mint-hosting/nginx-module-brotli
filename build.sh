@@ -11,7 +11,7 @@ apt update && apt install -y jq git curl gnupg2 ca-certificates apt-utils autoco
 # Set nginx variables - latest version and the source download url
 nginx_download_uri=$(curl -s $NGINX_GIT_TAGS_URI | jq -r '.[0].tarball_url')
 #- NGINX_RELEASE_VERSION=$(curl -s $${NGINX_GIT_TAGS_URI} | jq -r '.[0].name' | cut -d"-" -f2)
-NGINX_RELEASE_VERSION=1.16.0
+NGINX_RELEASE_VERSION=1.16.1
 
 # Create required directories
 mkdir -p $BUILD_BASE_DIR
