@@ -72,8 +72,8 @@ steps:
     image: debian:buster
     pull: always
     environment:
-      BUILD_OS_VERSION: debian-buster
-      BUILD_BASE_DIR: debianbuster
+      BUILD_OS_VERSION: debian-10
+      BUILD_BASE_DIR: debian10
       BROTLI_GIT_REPO_URI: https://github.com/google/ngx_brotli.git
       NGINX_GIT_TAGS_URI: https://api.github.com/repos/nginx/nginx/tags
     commands:
@@ -86,8 +86,8 @@ steps:
     image: debian:stretch
     pull: always
     environment:
-      BUILD_OS_VERSION: debian-stretch
-      BUILD_BASE_DIR: debianstretch
+      BUILD_OS_VERSION: debian-9
+      BUILD_BASE_DIR: debian9
       BROTLI_GIT_REPO_URI: https://github.com/google/ngx_brotli.git
       NGINX_GIT_TAGS_URI: https://api.github.com/repos/nginx/nginx/tags
     commands:
