@@ -106,7 +106,7 @@ steps:
         from_secret: github_email
       GITHUB_USERNAME:
         from_secret: github_username
-      BROTLI_MODULE_GIT_REPOSITORY: git@github.com:mint-hosting/cicd-test.git
+      BROTLI_MODULE_GIT_REPOSITORY: git@github.com:mint-hosting/nginx-module-brotli.git
     commands:
       # Configure SSH and add deploy key
       - apt update && apt -y install git openssh-client
