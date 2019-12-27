@@ -23,7 +23,7 @@ steps:
     commands:
       - apk update && apk add jq curl
       - nginx_release_version=$(curl -s $${nginx_git_tags_uri} | jq -r '.[0].name' | cut -d"-" -f2)
-      - node=$(curl -s $${brotli_mint_git_tags_uri} | jq --arg NGINXVERSION "$nginx_release_version" '.[] | select(.name==$NGINXVERSION) | .node_id')
+      - node=$(curl -s $${brotli_mint_git_tags_uri} | jq --arg NGINXVERSION "$nginx_release_version-debian-10" '.[] | select(.name==$NGINXVERSION) | .node_id')
       - if [[ "$node" != "" ]] ; then exit 1 ; fi
     
   - name: Build on Ubuntu 18.04
