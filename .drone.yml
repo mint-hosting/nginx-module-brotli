@@ -126,7 +126,7 @@ steps:
       - Build on Ubuntu 19.04
       - Build on Ubuntu 18.04
 
-  - name: Notifications
+  - name: Notifications for checks
     image: plugins/slack
     settings:
       webhook: 
@@ -139,12 +139,31 @@ steps:
         {{#success build.status}}
           {{ repo.name }} build {{ build.number }} succeeded!
         {{else}}
-          {{ repo.name }} build {{ build.number }} didn't run. Possible reasons: build failed or module is alrerady compiled for this version of Nginx. Last commit was {{ build.link }}
+          {{ repo.name }} build {{ build.number }} didn't run because module is already compiled for this version of Nginx. Last commit was {{ build.link }}
         {{/success}}
     when:
-      status: [ success, failure ]
+      status: [failure]
     depends_on:
       - Pre-build checks
+  
+  - name: Notifications for build
+    image: plugins/slack
+    settings:
+      webhook: 
+        from_secret: slack_webhook_url
+      channel:
+        from_secret: slack_channel
+      username:
+        from_secret: slack_username
+      template: >
+        {{#success build.status}}
+          {{ repo.name }} build {{ build.number }} succeeded!
+        {{else}}
+          {{ repo.name }} build {{ build.number }} has failed. Last commit was {{ build.link }}
+        {{/success}}
+    when:
+      status: [ success ]
+    depends_on:
       - Build on Debian 10
       - Build on Debian 9
       - Build on Ubuntu 19.10
