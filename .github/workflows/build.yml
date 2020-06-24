@@ -1,0 +1,121 @@
+name: Build Brotli module for Nginx
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  pre_check:
+    name: Pre-build checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pre-build checks
+        id: checks
+        shell: bash
+        env:
+          NGINX_TAGS: ${{ secrets.NGINX_TAGS }}
+          BROTLI_MINT_TAGS_URI: ${{ secrets.BROTLI_MINT_TAGS_URI }}
+        run: |
+          apt update && apt upgrade
+          nginx_release_version=$(curl -s $NGINX_TAGS | jq -r '.[0].name' | cut -d"-" -f2)
+          echo $nginx_release_version
+          node=$(curl -s $BROTLI_MINT_TAGS_URI | jq --arg NGINXVERSION "$nginx_release_version-debian-10" '.[] | select(.name==$NGINXVERSION) | .node_id')
+          echo $node > node.txt
+          value=$(cat node.txt | jq '. | length' )
+          if [ $value != 0]; then
+            exit 1
+          fi
+
+  build:
+    name: Build
+    strategy:
+      max-parallel: 3
+      matrix:
+        os: ['ubuntu:18.04', 'ubuntu:20.04', 'debian:10']
+    runs-on: ubuntu-latest
+    needs: pre_check
+    if: always()
+    container: ${{ matrix.os }}
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v1
+      - name: Install prerequisite packages
+        shell: bash
+        run: |
+          apt update && apt-get install -y lsb-release curl jq git openssh-client
+        if: env.WORKFLOW_CONCLUSION == 'success'
+      - name: Pull from repository
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository }}
+        if: env.WORKFLOW_CONCLUSION == 'success'
+      - name: Get os version
+        shell: bash
+        id: os_version
+        run: |
+          distribution=`lsb_release -si | tr '[:upper:]' '[:lower:]'`
+          os_version=`lsb_release -sr`
+          echo "::set-output name=os_distribution::$distribution-$os_version"
+        if: env.WORKFLOW_CONCLUSION == 'success'
+      - name: Assign nginx version
+        shell: bash
+        id: version
+        env:
+          NGINX_TAGS: ${{ secrets.NGINX_TAGS }}
+        run: |
+          nginx_release_version=$(curl -s $NGINX_TAGS | jq -r '.[0].name' | cut -d"-" -f2)
+          echo "::set-output name=nginx_version::$nginx_release_version"
+        if: env.WORKFLOW_CONCLUSION == 'success'
+      - name: Build
+        shell: bash
+        env:
+          BUILD_OS_VERSION: ${{ steps.os_version.outputs.os_distribution }}
+          BUILD_BASE_DIR: ${{ steps.os_version.outputs.os_distribution }}
+          BROTLI_GIT_REPO_URI: ${{ secrets.BROTLI_GIT_REPO_URI }}
+          NGINX_GIT_TAGS_URI: ${{ secrets.NGINX_GIT_TAGS_URI }}
+        run: |
+          echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+          chmod +x build.sh && sh build.sh
+        if: env.WORKFLOW_CONCLUSION == 'success'
+      - name: Create release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ secrets.USERNAME }}
+          EMAIL: ${{ secrets.EMAIL }}
+          SSH: ${{ secrets.SSH_KEY }}
+        run: |
+          mkdir -p /root/.ssh
+          eval "$(ssh-agent -s)"
+          echo "$SSH" | tr -d '\r' | ssh-add - > /dev/null
+          echo "Host *" > /root/.ssh/config
+          echo " StrictHostKeyChecking no" >> /root/.ssh/config
+          cd ./${{ steps.os_version.outputs.os_distribution }}/build/
+          git init
+          git config --global user.email "$EMAIL"
+          git config --global user.name "$USERNAME"
+          git remote add origin git@github.com:${{ github.repository }}
+          git checkout -b build-${{ steps.version.outputs.nginx_version }}-${{ steps.os_version.outputs.os_distribution }}
+          git add --all
+          git commit -m 'Brotli Module for nginx v${{ steps.version.outputs.nginx_version }} (${{ steps.os_version.outputs.os_distribution }})'
+          git push origin build-${{ steps.version.outputs.nginx_version }}-${{ steps.os_version.outputs.os_distribution }}
+          git tag -am "Brotli module built for nginx v${{ steps.version.outputs.nginx_version }} (${{ steps.os_version.outputs.os_distribution }})" ${{ steps.version.outputs.nginx_version }}-${{ steps.os_version.outputs.os_distribution }} && git push origin ${{ steps.version.outputs.nginx_version }}-${{ steps.os_version.outputs.os_distribution }}
+          git push origin --delete build-${{ steps.version.outputs.nginx_version }}-${{ steps.os_version.outputs.os_distribution }}
+        if: env.WORKFLOW_CONCLUSION == 'success'
+  
+  slackNotification:
+    needs: build
+    name: Send notifications
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v1
+      - name: Slack Notification if build complete
+        uses: mint-hosting/action-slack-notify@5.0
+        with:
+          status: ${{ env.WORKFLOW_CONCLUSION }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          SLACK_USERNAME: ${{ secrets.SLACK_USERNAME }}
+          SLACK_MESSAGE: "${{ github.repository }} build succeeded!"
+          SLACK_TITLE: "Brotli Compile Status"
+        if: env.WORKFLOW_CONCLUSION == 'success'
