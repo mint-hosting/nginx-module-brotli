@@ -8,6 +8,7 @@ jobs:
   pre_check:
     name: Pre-build checks
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Pre-build checks
         id: checks
