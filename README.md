@@ -1,3 +1,5 @@
+![Build Brotli module for Nginx](https://github.com/mint-hosting/nginx-module-brotli/workflows/Build%20Brotli%20module%20for%20Nginx/badge.svg)
+
 Brotli module for Nginx
 -----------------
 
