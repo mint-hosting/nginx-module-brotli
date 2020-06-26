@@ -22,7 +22,7 @@ jobs:
           node=$(curl -s $BROTLI_MINT_TAGS_URI | jq --arg NGINXVERSION "$nginx_release_version-debian-10" '.[] | select(.name==$NGINXVERSION) | .node_id')
           echo $node > node.txt
           value=$(cat node.txt | jq '. | length' )
-          if [ $value != 0]; then
+          if [ $value != 0 ]; then
             exit 1
           fi
 
