@@ -17,7 +17,7 @@ jobs:
           NGINX_TAGS: ${{ secrets.NGINX_TAGS }}
           BROTLI_MINT_TAGS_URI: ${{ secrets.BROTLI_MINT_TAGS_URI }}
         run: |
-          nginx_release_version=$(curl -s $NGINX_TAGS | jq -r '.[0].name' | cut -d"-" -f2)
+          nginx_release_version=1.18.0
           echo $nginx_release_version
           node=$(curl -s $BROTLI_MINT_TAGS_URI | jq --arg NGINXVERSION "$nginx_release_version-debian-10" '.[] | select(.name==$NGINXVERSION) | .node_id')
           echo $node > node.txt
