@@ -63,7 +63,7 @@ jobs:
           NGINX_TAGS: ${{ secrets.NGINX_TAGS }}
         run: |
           nginx_release_version=$(curl -s $NGINX_TAGS | jq -r '.[0].name' | cut -d"-" -f2)
-          echo "::set-output name=nginx_version::$nginx_release_version"
+          echo "::set-output name=nginx_version::1.18.0"
         if: env.WORKFLOW_CONCLUSION == 'success'
       - name: Build
         shell: bash
