@@ -3,6 +3,12 @@ name: Build Brotli module for Nginx
 on:
   schedule:
     - cron: '0 1 * * *'
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
 
 jobs:
   pre_check:
