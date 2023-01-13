@@ -50,7 +50,7 @@ jobs:
           apt update && apt-get install -y lsb-release curl jq git openssh-client
         if: env.WORKFLOW_CONCLUSION == 'success'
       - name: Pull from repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: ${{ github.repository }}
         if: env.WORKFLOW_CONCLUSION == 'success'
