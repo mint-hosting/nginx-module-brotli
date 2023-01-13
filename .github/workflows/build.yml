@@ -43,7 +43,7 @@ jobs:
     if: always()
     container: ${{ matrix.os }}
     steps:
-      - uses: technote-space/workflow-conclusion-action@v1
+      - uses: technote-space/workflow-conclusion-action@v3
       - name: Install prerequisite packages
         shell: bash
         run: |
@@ -113,7 +113,7 @@ jobs:
     name: Send notifications
     runs-on: ubuntu-latest
     steps:
-      - uses: technote-space/workflow-conclusion-action@v1
+      - uses: technote-space/workflow-conclusion-action@v3
       - name: Slack Notification if build complete
         uses: mint-hosting/action-slack-notify@5.0
         with:
